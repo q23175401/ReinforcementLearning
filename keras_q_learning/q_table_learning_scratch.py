@@ -1,7 +1,6 @@
 import gym
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 
 # env = gym.make('MountainCar-v0')
 env = gym.make('CartPole-v0')

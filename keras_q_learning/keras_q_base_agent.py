@@ -2,14 +2,18 @@ from abc import ABC, abstractmethod
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as L
-from q_learning_replay_buffer import OneTrajectoryData, MyReplayBuffer
 from tensorflow.keras.models import load_model
-from tensorflow.keras import Model, Sequential
+from tensorflow.keras.optimizers import Adam
+from .q_learning_replay_buffer import OneTrajectoryData, MyReplayBuffer
+from typing import Callable
 
 class QBaseAgent(ABC):
-    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, q_network: Model=None):
+    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, build_q_network: Callable=None):
+        self.n_actions = n_actions
+        self.input_shape = input_shape
+
         self.train_step_counter = 0
-        self.LEARNING_RATE = learning_rate
+        self.learning_rate = learning_rate
         self.UPDATE_TARGET_NET_STEPS = update_target_steps
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
@@ -18,17 +22,14 @@ class QBaseAgent(ABC):
         # replay buffer for training
         self.MAX_BUFFER_SIZE = max_buffer_size
         self.MIN_DATA_TO_COLLECT = min_data_to_collect
-        
-        self.value_net  = self.build_my_qnet(n_actions, input_shape) if q_network == None else q_network
-        self.target_net = self.construct_target_net_from_value_net()
 
+        # change build_q_network function
+        self.build_my_qnet = build_q_network or self.build_my_qnet
+        self.value_net  = self.build_my_qnet()
+        self.target_net = self.build_my_qnet()
         self.update_target_net() # pass value net's weights to target net
 
         self.replay_buffer = MyReplayBuffer(self.MAX_BUFFER_SIZE)
-
-    def construct_target_net_from_value_net(self) -> Model:
-        config = self.value_net.get_config()
-        return tf.keras.Sequential.from_config(config)
 
     def get_action(self, one_state):
         return np.argmax(self.value_net.predict(np.array([one_state])), axis=1)[0]
@@ -93,16 +94,16 @@ class QBaseAgent(ABC):
     def train_one_batch(self, batch_size, DISCOUNT_FACTOR) -> bool:
         pass
 
-    def build_my_qnet(self, n_actions, input_shape):
+    def build_my_qnet(self):
         layer_list = [
-            L.InputLayer(input_shape=input_shape),
+            L.InputLayer(input_shape=self.input_shape),
             L.Flatten(),
             L.Dense(128, activation='relu'),
             L.Dense(128, activation='relu'),
-            L.Dense(n_actions, activation='linear'),
+            L.Dense(self.n_actions, activation='linear'),
         ]
         model = tf.keras.Sequential(layer_list)
-        model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=self.LEARNING_RATE), metrics=['accuracy'])
+        model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=self.learning_rate), metrics=['accuracy'])
         return model
 
     def plot_result(self, n_episodes, scores):
@@ -162,10 +163,5 @@ class QBaseAgent(ABC):
     
     def load_agent(self, file_name):
         self.value_net = load_model(file_name)
-
-        # copy value_net structure to target_net
-        config = self.value_net.get_config()
-        self.target_net = self.construct_target_net_from_value_net()
-        
-        self.update_target_net() # copy value_net weights to target_net
+        self.target_net = load_model(file_name)
 

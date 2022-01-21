@@ -1,15 +1,14 @@
-from tensorflow.keras import Model
+from tensorflow.keras.models import Model, load_model
 import tensorflow.keras.layers as L
 import tensorflow as tf
-from keras_dqn_agent import DqnAgent
-from keras_ddqn_agent import DDqnAgent
 import numpy as np
-from tensorflow.keras.models import load_model
-import numpy as np
+from typing import Callable
+from .keras_dqn_agent import DqnAgent
 
 class DuelingDeepQNetworkModel(Model):
     def __init__(self, n_actions, input_shape, fc1_units, fc2_units):
         super().__init__()
+        self.trainable=True
         self.n_actions = n_actions
         self.in_shape = input_shape
         self.fc1_units = fc1_units
@@ -67,36 +66,28 @@ class DuelingDeepQNetworkModel(Model):
         return cls(**config)
         
 class DuelingDqnAgent(DqnAgent):
-    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, q_network: DuelingDeepQNetworkModel):
-      super().__init__(n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, q_network=q_network)
+    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, build_q_network: Callable=None):
+      super().__init__(n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, build_q_network)
 
     def get_action(self, one_state):
         advantage = self.value_net.get_advantage(np.array([one_state])) # dueling net get action score from A network path
         action = np.array(tf.math.argmax(advantage, axis=1))[0]
         return action
 
-    def construct_target_net_from_value_net(self) -> Model:
-        config = self.value_net.get_config()
-        return DuelingDeepQNetworkModel.from_config(config)
-
-    def build_my_qnet(self, n_actions, input_shape):
+    def build_my_qnet(self):
         model = DuelingDeepQNetworkModel(
-                n_actions=n_actions,
-                input_shape=input_shape,
+                n_actions=self.n_actions,
+                input_shape=self.input_shape,
                 fc1_units=128,
                 fc2_units=128,
             )
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.LEARNING_RATE), loss='mse', metrics=['accuracy'])
+
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate), loss='mse', metrics=['accuracy'])
         return model
 
     def load_agent(self, file_name):
-
-        self.value_net = load_model(
-                    file_name, custom_objects={"DuelingDeepQNetworkModel": DuelingDeepQNetworkModel}
-                )
-
-        self.target_net = self.construct_target_net_from_value_net()
-        self.update_target_net()
+        self.value_net = load_model(file_name, custom_objects={"DuelingDeepQNetworkModel": DuelingDeepQNetworkModel})
+        self.target_net = load_model(file_name, custom_objects={"DuelingDeepQNetworkModel": DuelingDeepQNetworkModel})
 
 if __name__ == "__main__":
     n_actions = 6

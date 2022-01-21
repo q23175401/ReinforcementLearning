@@ -1,14 +1,9 @@
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.layers as L
-from tensorflow.python.keras.layers.core import Flatten
-from tensorflow.python.keras.models import Sequential
-from keras_q_base_agent import QBaseAgent
-from tensorflow.keras import Model, Sequential
-
+from .keras_q_base_agent import QBaseAgent
+from typing import Callable
 class DDqnAgent(QBaseAgent):
-    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, q_network: Sequential=None):
-      super().__init__(n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, q_network)
+    def __init__(self, n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, build_q_network: Callable=None):
+      super().__init__(n_actions, input_shape, learning_rate, update_target_steps, epsilon, epsilon_decay, epsilon_end, max_buffer_size, min_data_to_collect, build_q_network)
 
     def train_one_batch(self, batch_size, DISCOUNT_FACTOR):
         if len(self.replay_buffer) < batch_size:
