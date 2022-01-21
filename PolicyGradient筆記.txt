@@ -1,0 +1,116 @@
+policy of actor= 
+    (state => network => action)
+
+θ = paramaters of this policy
+π = policy of actor
+
+π(s1) = a1  Reword(a1, s1) = r1
+
+一場遊戲 = 1 episode
+
+遊戲流程(1 episode)
+
+def PlayOneEpisode():
+    Trajectory τ = []
+    rewards = []
+
+    while not End:
+        state = env.current_state
+        action = π(state)
+        t.append(state)
+        t.append(action)
+    
+        reward = Reword(state, action)
+        rewards.append(reward)
+    
+    total_reward = sum(rewards)
+    return total_reward
+
+=> 訓練目標是透過調整actor參數
+=> 使得total_reward = R(τ)上升 => R(τ)吃的是整場遊戲的整個流程算出最後結果
+
+τ  是一個sequence
+    有非常多種sequence
+    每種sequence都有他出現的機率
+    所以可以算
+    Probθ(τ)
+      => 在這個paramater θ的 policy 下
+      => 出現此sequence τ的機率
+
+得到的行動軌跡τ是隨機性的:
+Probθ(τ)
+ = P(s1) * Pθ(a1 | s1) * P(s2 | s1, a1) * Pθ(a2 | s2) * P(s3 | s2, a2)......
+ = P(s1) * Πi:1~∞ ( Pθ(ai | si) * P(si+1| si, ai))
+
+ => P(si+1 | si, ai)是來自Env沒辦法調整
+ => Pθ(ai | si) 才是透過policy來調整的部分
+
+得到的獎勵是固定的:
+    => 同一個τ算出來的R(τ)是一樣的
+    => Σt:1~T rt
+
+    => τ是隨機性的
+    => 同一個θ玩100次行動軌跡τ是不一樣的
+    => 同一個θ玩100次得到的reward都不一樣
+    => 所以一整場遊戲在某個參數θ的policy下得到的total_reward也是隨機性的 Prob(R(τ), θ)=something
+
+    => 所以我們要找出的是 E[Prob(R(τ), θ)]最高的參數θbest
+    => let E[Prob(R(τ), θ)] be Rbarθ
+    => 意思是在此θ下玩遊戲所有可能出現的τ對應的R(τ)的期望值
+    => Rbarθ = Στ R(τ) * Probθ(τ)
+    => 為了最大化Rbarθ =>使用gradient ascent
+        => 要找出 ▽Rbarθ = Στ R(τ) * ▽Pθ(τ)
+        =>        = Στ R(τ) * Pθ(τ) * ▽log(Pθ(τ))
+        => 不能窮舉所有的τ，所以只好
+	=> 1/N * Σi:1~N R(τi) * ▽log(Pθ(τi))
+	=> 因為Pθ(τi) 我們不能控制來自Env的隨機性
+	=> 所以我們改求去掉Env隨機性的部分就好
+	=> 1/N * Σi:1~N ( Σt:1~T R(τi) * ▽log(Pθ(ai(t) | si(t))) ) 
+	=> (ai(t)是第i個τ的第t個action)
+	=> τi 是第i個eqisode的行動軌跡
+	=> Pθ(ai(t) | si(t)) 是這個動作在此θ的policy下遇到si(t) 而採取 ai(t)的機率
+	    => 就是actor model的輸出(採取每一個動作的機率)
+baseline Tip
+    => 因為在調整的時候有些遊戲reward最小也是0
+    => 所以會不知道那些reward才是比較好的
+    => 所以通常會減掉baseline b (可以自己設定 可以是目前所有出現過的total_reward的平均值)
+    => 或是從network去計算出來的(critic network)
+    => 1/N * Σi:1~N ( Σt:1~T ( (R(τi)-b) * ▽log(Pθ(ai(t) | si(t))) ) )
+
+Suitable Credit
+    => 因為整場遊戲不一定所有的action都是壞的或都是好的
+    => 算R(τi)的過程應該要改成
+	=> Σt':t~T ri(t') => 從這個t動作點之後reward的總和(t動作點之前的不算)
+	=> 1/N * Σi:1~N ( Σt:1~T ( (Σt':t~T (rt') - b ) * ▽log(Pθ(ai(t) | si(t))) ) )
+
+    => 但是t時間點後面的ri(t')太後面的話也跟t動作沒甚麼關係
+    => 所以加入gamma γ = 0.99 (discount factor)之類的 讓後面的ri(t')變越來越小
+	=> 1/N * Σi:1~N ( Σt:1~T ( (Σt':t~T (γ^(t'-t) * rt') - b ) * ▽log(Pθ(ai(t) | si(t))) ) )
+    => 目前有gaes的方式算得比較好(來算出更適當的ri(t'))
+
+Advantage function
+    => (Σt':t~T (γ^(t'-t) * rt') - b ) 是指在i episode的 t動作下的"實際reward"
+    => 所以把它命名成實際reward function => advantage function
+    => 目的是為了代表找出了該動作實際拿到的分數
+    => 1/N * Σi:1~N ( Σt:1~T ( ADVANTAGE t(rewards) * ▽log(Pθ(ai(t) | si(t))) ) )
+    => 1/N * Σi:1~N ( Σt:1~T ( A(ai(t), si(t)) * ▽log(Pθ(ai(t) | si(t))) ) )
+
+On-policy to off policy
+    => 因為Policy gradient的方法比需要訓練玩好幾個episode才可以update θ
+    => 太花時間也太浪費資源了
+    => 所以想要用off policy的方法
+	=> 利用另一個θ' 來玩遊戲 θ'是固定不變的
+	=> 所以用θ'玩遊戲的資料可以更新θ的話
+	=> 就可以用θ'的資料 重複一直更新θ
+    => 利用importance sampling的技巧
+	=> 原本Ex~p[f(x)] ≒ 1/N Σi:1~N f(xi) (sample N 個資料的平均(數量大的話就約等於期望值))
+	=> 而 Ex~p[f(x)]如果是連續的 = ∫f(x)p(x)dx = ∫f(x)p(x)* q(x)/q(x) dx = ∫f(x)p(x)/q(x) * q(x)dx
+	    => = Ex~q[f(x)p(x)/q(x)] = Ex~q[f'(x)] = Ex~q[ f(x) * ratio(p, q) ]
+
+    => 所以使用off policy會變成
+	=> ▽Rbarθ = Eτ~pθ(τ)[R(τ) * ▽log(Pθ(τ)] = Eτ~pθ'(τ) [pθ(x)/pθ'(x) * R(τ) * ▽log(pθ(τ)]
+	=> 去除環境不可控的機率已經換成advantage function
+        =>          = E(a(t), s(t))~pθ'(τ) [pθ(at|st)/pθ'(at|st) * Aθ'(a(t), s(t)) * ▽log(pθ(at|st))]
+        => 所以原本要最大化的Rbarθ變成 (objective function)
+		=> Rbarθ'(θ)
+		=> = E(a(t), s(t))~pθ'(τ) [pθ(at|st)/pθ'(at|st) * Aθ'(a(t), s(t))]
