@@ -1,6 +1,7 @@
 from keras_q_learning import DDqnAgent, DqnAgent, DuelingDqnAgent, DuelingDeepQNetworkModel, DuellingDDqnAgent
 import gym
 from connectx_game import connectx_agents, GameBoardEnv
+
 # from connectx_game.connectx_agents import MinimaxAgent
 import tensorflow.keras.layers as L
 import tensorflow as tf
@@ -12,13 +13,13 @@ if __name__ == "__main__":
 
     # hyperparameters
     LEARNING_RATE = 0.01
-    UPDATE_TARGET_NET_STEPS = 1000
+    UPDATE_TARGET_NET_STEPS = 300
     epsilon = 0.8
-    epsilon_decay = 0.996
+    epsilon_decay = 0.997
     epsilon_end = 0.01
 
     # replay buffer for training
-    MAX_BUFFER_SIZE = 10000
+    MAX_BUFFER_SIZE = 50000
     MIN_DATA_TO_COLLECT = 200
 
     # training parameters
@@ -35,13 +36,16 @@ if __name__ == "__main__":
     def build_qnet(num_output, input_shape, lr):
         layer_list = [
             L.InputLayer(input_shape=input_shape),
+            L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+            L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+            L.Conv2D(8, (3, 3), padding="same", activation="tanh"),
             L.Flatten(),
-            L.Dense(128, activation='tanh'),
-            L.Dense(128, activation='tanh'),
-            L.Dense(num_output, activation='linear'),
+            L.Dense(32, activation="tanh"),
+            L.Dense(32, activation="tanh"),
+            L.Dense(num_output, activation="linear"),
         ]
         model = tf.keras.Sequential(layer_list)
-        model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=lr), metrics=['accuracy'])
+        model.compile(loss="mean_squared_error", optimizer=Adam(learning_rate=lr), metrics=["accuracy"])
         return model
 
     # def build_qnet(num_output, input_shape, lr):
@@ -61,9 +65,8 @@ if __name__ == "__main__":
         epsilon_end=epsilon_end,
         max_buffer_size=MAX_BUFFER_SIZE,
         min_data_to_collect=MIN_DATA_TO_COLLECT,
-        build_q_network=lambda: build_qnet(n_actions, input_shape, LEARNING_RATE)
+        build_q_network=lambda: build_qnet(n_actions, input_shape, LEARNING_RATE),
     )
-
 
     # agent = DuellingDDqnAgent(**agent_config)
     agent = DDqnAgent(**agent_config)
