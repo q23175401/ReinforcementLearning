@@ -80,8 +80,8 @@ class QBaseAgent(ABC):
                 accumulated_reward += reward
                 self.store_transition(state, action, reward, next_state, done)
 
-                if RENDER_RESULT:
-                    print("take: ", action)
+                # if RENDER_RESULT:
+                #     print("take: ", action)
 
                 if len(self.replay_buffer) > self.MIN_DATA_TO_COLLECT:  # 要超過了最少的量才開訓練
 
@@ -100,7 +100,7 @@ class QBaseAgent(ABC):
             if RENDER_RESULT:
                 collect_env.render()
                 avg_score = np.mean(scores[-show_result:])
-                print(f"Episode {i_episode} end with {accumulated_reward} time steps", "average score", avg_score)
+                print(f"Episode {i_episode} end with {accumulated_reward} total scores, ", "average score", avg_score)
 
         self.plot_result(N_EPISODES, scores)
         collect_env.close()

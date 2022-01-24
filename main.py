@@ -22,8 +22,9 @@ def prepare_agent_env():
     MAX_BUFFER_SIZE = 100000
     MIN_DATA_TO_COLLECT = 2000
 
+    env = gym.make("LunarLander-v2")
     # env = gym.make('CartPole-v0')
-    env = GameBoardEnv(connectx_agents.MinimaxAgent(1))
+    # env = GameBoardEnv(connectx_agents.MinimaxAgent(1))
 
     n_actions = env.action_space.n
     input_shape = env.observation_space.shape
@@ -31,14 +32,24 @@ def prepare_agent_env():
     def build_qnet(num_output, input_shape, lr):
         layer_list = [
             L.InputLayer(input_shape=input_shape),
-            L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
-            L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
-            L.Conv2D(8, (3, 3), padding="same", activation="tanh"),
+            # L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+            # L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+            # L.Conv2D(8, (3, 3), padding="same", activation="tanh"),
             L.Flatten(),
             L.Dense(32, activation="tanh"),
             L.Dense(32, activation="tanh"),
             L.Dense(num_output, activation="linear"),
         ]
+        # layer_list = [
+        #     L.InputLayer(input_shape=input_shape),
+        #     L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+        #     L.Conv2D(16, (3, 3), padding="same", activation="tanh"),
+        #     L.Conv2D(8, (3, 3), padding="same", activation="tanh"),
+        #     L.Flatten(),
+        #     L.Dense(32, activation="tanh"),
+        #     L.Dense(32, activation="tanh"),
+        #     L.Dense(num_output, activation="linear"),
+        # ]
         model = tf.keras.Sequential(layer_list)
         model.compile(loss="mean_squared_error", optimizer=Adam(learning_rate=lr), metrics=["accuracy"])
         return model
@@ -81,7 +92,7 @@ def train_agent(agent, env, batch_size=32, discount=0.99, n_episodes=5000):
         N_EPISODES=N_EPISODES,
         batch_size=BATCH_SIZE,
         DISCOUNT_FACTOR=DISCOUNT_FACTOR,
-        show_result=20,
+        show_result=5,
     )
 
 
