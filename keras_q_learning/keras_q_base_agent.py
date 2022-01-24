@@ -80,6 +80,9 @@ class QBaseAgent(ABC):
                 accumulated_reward += reward
                 self.store_transition(state, action, reward, next_state, done)
 
+                if RENDER_RESULT:
+                    print("take: ", action)
+
                 if len(self.replay_buffer) > self.MIN_DATA_TO_COLLECT:  # 要超過了最少的量才開訓練
 
                     train_ok = self.train_one_batch(batch_size, DISCOUNT_FACTOR)

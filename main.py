@@ -9,23 +9,18 @@ from tensorflow.keras.optimizers import Adam
 import numpy as np
 
 
-if __name__ == "__main__":
+def prepare_agent_env():
 
     # hyperparameters
-    LEARNING_RATE = 0.01
-    UPDATE_TARGET_NET_STEPS = 300
-    epsilon = 0.8
-    epsilon_decay = 0.997
+    LEARNING_RATE = 0.1
+    UPDATE_TARGET_NET_STEPS = 900
+    epsilon = 1
+    epsilon_decay = 0.999
     epsilon_end = 0.01
 
     # replay buffer for training
-    MAX_BUFFER_SIZE = 50000
-    MIN_DATA_TO_COLLECT = 200
-
-    # training parameters
-    BATCH_SIZE = 32
-    DISCOUNT_FACTOR = 0.99
-    N_EPISODES = 50000
+    MAX_BUFFER_SIZE = 100000
+    MIN_DATA_TO_COLLECT = 2000
 
     # env = gym.make('CartPole-v0')
     env = GameBoardEnv(connectx_agents.MinimaxAgent(1))
@@ -72,10 +67,24 @@ if __name__ == "__main__":
     agent = DDqnAgent(**agent_config)
 
     agent.collect_random_samples(env)
+    return agent, env
+
+
+def train_agent(agent, env, batch_size=32, discount=0.99, n_episodes=5000):
+    # training parameters
+    BATCH_SIZE = batch_size
+    DISCOUNT_FACTOR = discount
+    N_EPISODES = n_episodes
+
     agent.train(
         collect_env=env,
         N_EPISODES=N_EPISODES,
         batch_size=BATCH_SIZE,
         DISCOUNT_FACTOR=DISCOUNT_FACTOR,
-        show_result=10,
+        show_result=20,
     )
+
+
+if __name__ == "__main__":
+    agent, env = prepare_agent_env()
+    train_agent(agent, env, 32, 0.99, 1000000)
