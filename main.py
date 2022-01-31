@@ -12,10 +12,10 @@ import numpy as np
 def prepare_agent_env():
 
     # hyperparameters
-    LEARNING_RATE = 0.1
-    UPDATE_TARGET_NET_STEPS = 900
-    epsilon = 1
-    epsilon_decay = 0.999
+    LEARNING_RATE = 0.01
+    UPDATE_TARGET_NET_STEPS = 400
+    epsilon = 0.5
+    epsilon_decay = 0.998
     epsilon_end = 0.01
 
     # replay buffer for training
@@ -98,4 +98,4 @@ def train_agent(agent, env, batch_size=32, discount=0.99, n_episodes=5000):
 
 if __name__ == "__main__":
     agent, env = prepare_agent_env()
-    train_agent(agent, env, 32, 0.99, 1000000)
+    train_agent(agent, env, 32, 0.99, 3000)
